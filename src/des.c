@@ -151,7 +151,7 @@ int des_make_subkeys(const unsigned char key[8], unsigned char subKeys[16][6]) {
         uint64_t K = 0;
         for (int i = 0; i < 48; i++) {
             uint64_t bit = (CD >> (56 - PC_table_2[i])) & 1;
-            K = (K << 1) | bit; 
+            K |= (bit << (47 - i)); 
         }
         //存入subKeys[round]
         for (int i = 0; i < 6; i++) {
@@ -162,7 +162,7 @@ int des_make_subkeys(const unsigned char key[8], unsigned char subKeys[16][6]) {
 }
 // 轮函数
 uint32_t f(uint32_t R, const unsigned char subKeys[6]) {
-    // 将密钥转为uint64_t
+    // 将密钥变为uint64
     uint64_t K = 0;
     for (int i = 0; i < 6; i++) {
         K = (K << 8) | subKeys[i];
@@ -170,28 +170,57 @@ uint32_t f(uint32_t R, const unsigned char subKeys[6]) {
     // E扩展
     uint64_t E = 0;
     for (int i = 0; i < 48; i++) {
-        int bit_position = 32 - E_box[i];
-        uint64_t bit = ((uint64_t)R >> bit_position) & 1;
+        uint64_t bit = ((uint64_t)R >> (32 - E_box[i])) & 1;
         E |= (bit << (47 - i));
     }
-    // 与子密钥模2加
+    // 模2加
     E = (E ^ K) & 0x0FFFFFFFFFFFF;
-    // S盒运算
+    // S 替代函数
     uint32_t S = 0;
     for (int i = 0; i < 8; i++) {
-        uint8_t block = (E >> (42 - 6 * i)) & 0x3F;     // 提取6位块
-        int row = ((block >> 5) << 1) | (block & 0x1);  // 行号由第1和第6位确定
-        int col = (block >> 1) & 0xF;                   // 列号由中间4位确定
-        S = (S << 4) | S_box[i][row][col];   // 4位替换
+        uint8_t block = (E >> (42 - 6 * i)) & 0x3F;
+        int row = (block & 1) | ((block >> 4) & 0x02);
+        int col = (block >> 1) & 0x0F;
+        S = (S << 4) | S_box[i][row][col];
     }
-    // 置换运算P
+    // P 置换
     uint32_t P = 0;
     for (int i = 0; i < 32; i++) {
-        int bit_position = 32 - P_box[i];
-        uint32_t bit = (S >> bit_position) & 1;
+        uint32_t bit = (S >> (32 - P_box[i])) & 1;
         P |= (bit << (31 - i));
     }
     return P;
+
+    // // 将密钥转为uint64_t
+    // uint64_t K = 0;
+    // for (int i = 0; i < 6; i++) {
+    //     K = (K << 8) | subKeys[i];
+    // }
+    // // E扩展
+    // uint64_t E = 0;
+    // for (int i = 0; i < 48; i++) {
+    //     int bit_position = 32 - E_box[i];
+    //     uint64_t bit = ((uint64_t)R >> bit_position) & 1;
+    //     E |= (bit << (47 - i));
+    // }
+    // // 与子密钥模2加
+    // E = (E ^ K) & 0x0FFFF FFFF FFFF;
+    // // S盒运算
+    // uint32_t S = 0;
+    // for (int i = 0; i < 8; i++) {
+    //     uint8_t block = (E >> (42 - 6 * i)) & 0x3F;     // 提取6位块
+    //     int row = ((block >> 5) << 1) | (block & 0x1);  // 行号由第1和第6位确定
+    //     int col = (block >> 1) & 0xF;                   // 列号由中间4位确定
+    //     S = (S << 4) | S_box[i][row][col];   // 4位替换
+    // }
+    // // 置换运算P
+    // uint32_t P = 0;
+    // for (int i = 0; i < 32; i++) {
+    //     int bit_position = 32 - P_box[i];
+    //     uint32_t bit = (S >> bit_position) & 1;
+    //     P |= (bit << (31 - i));
+    // }
+    // return P;
 }
 /**
  * @brief DES encrypt single block
