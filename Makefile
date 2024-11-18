@@ -8,5 +8,6 @@ all:
 		-O3 -funroll-loops      \
 		$(SRC_DIR)/*		    \
 		-o $(BUILD_DIR)/main 
+
 clean:
-	rm -rf $(BUILD_DIR)/*
+	rm -f $(BUILD_DIR)/*
