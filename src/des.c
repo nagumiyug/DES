@@ -121,45 +121,41 @@ const int P_box[32] = {
  * @return 1 Failed
  */
 int des_make_subkeys(const unsigned char key[8], unsigned char subKeys[16][6]) {
-    if (key == NULL || subKeys == NULL) {
+    if ((key == NULL) || (subKeys == NULL)) {
         return 1;
     }
-
-    // 将8字节的key转换为uint64_t
     uint64_t key64 = 0;
     for (int i = 0; i < 8; i++) {
         key64 = (key64 << 8) | key[i];
     }
-    // 置换选择1
-    uint64_t t = 0;
+    // 置换选择1   
+    uint64_t CD = 0;
     for (int i = 0; i < 56; i++) {
-        int bit_position = 64 - PC_table_1[i];
-        uint64_t bit = (key64 >> bit_position) & 1;     // 提取目标位
-        t |= (bit << (55 - i));                         // 将位移到目标位置
+        uint64_t bit = (key64 >> (64 - PC_table_1[i])) & 1;
+        CD = (CD << 1) | bit; 
     }
-    uint32_t C = (t >> 28) & 0x0FFFFFFF;
-    uint32_t D = t & 0x0FFFFFFF;
+    uint32_t C = (CD >> 28) & 0x0FFFFFFF;
+    uint32_t D = CD & 0x0FFFFFFF;
 
     // 初始化subKeys
     memset(subKeys, 0, sizeof(unsigned char) * 16 * 6);
-    
-    // 16轮生成子密钥
+
+    // 16轮得到子密钥
     for (int round = 0; round < 16; round++) {
         // C 循环左移
         C = ((C << shift_table[round]) | (C >> (28 - shift_table[round]))) & 0x0FFFFFFF;
         // D 循环左移
         D = ((D << shift_table[round]) | (D >> (28 - shift_table[round]))) & 0x0FFFFFFF;
         // 置换选择2
-        uint64_t CD = (((uint64_t)C << 28) | D) & 0x0FFFFFFFFFFFFFFF;
+        uint64_t CD = (((uint64_t)C << 28) | D) & 0x0FFFFFFFFFFFFFF;
         uint64_t K = 0;
         for (int i = 0; i < 48; i++) {
-            int bit_position = 56 - PC_table_2[i];
-            uint64_t bit = (CD >> bit_position) & 1;    // 提取目标位
-            K |= (bit << (47 - i));              // 将位移到目标位置
+            uint64_t bit = (CD >> (56 - PC_table_2[i])) & 1;
+            K = (K << 1) | bit; 
         }
-        // 将K的48位存入subKeys[round][6]中
+        //存入subKeys[round]
         for (int i = 0; i < 6; i++) {
-            subKeys[round][i] = (K >> (40 - 8 * i)) & 0xFF; // 分解为6字节
+            subKeys[round][i] = (K >> (40 - i * 8)) & 0xFF;
         }
     }
     return 0;
