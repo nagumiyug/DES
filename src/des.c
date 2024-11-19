@@ -36,6 +36,16 @@ const int IP_table[64] = {
     61, 53, 45, 37, 29, 21, 13, 5,
     63, 55, 47, 39, 31, 23, 15, 7
 };
+const int new_IP_table[64] = {
+    57, 49, 41, 33, 25, 17,  9,  1, 
+    59, 51, 43, 35, 27, 19, 11,  3, 
+    61, 53, 45, 37, 29, 21, 13,  5, 
+    63, 55, 47, 39, 31, 23, 15,  7, 
+    56, 48, 40, 32, 24, 16,  8,  0, 
+    58, 50, 42, 34, 26, 18, 10,  2, 
+    60, 52, 44, 36, 28, 20, 12,  4, 
+    62, 54, 46, 38, 30, 22, 14,  6
+};
 // 逆置换IP^-1
 const int IP_table_reverse[64] = {
     40, 8, 48, 16, 56, 24, 64, 32,
@@ -47,6 +57,16 @@ const int IP_table_reverse[64] = {
     34, 2, 42, 10, 50, 18, 58, 26,
     33, 1, 41,  9, 49, 17, 57, 25
 };
+const int new_IP_table_reverse[64] = {
+    39,  7, 47, 15, 55, 23, 63, 31, 
+    38,  6, 46, 14, 54, 22, 62, 30, 
+    37,  5, 45, 13, 53, 21, 61, 29, 
+    36,  4, 44, 12, 52, 20, 60, 28, 
+    35,  3, 43, 11, 51, 19, 59, 27, 
+    34,  2, 42, 10, 50, 18, 58, 26, 
+    33,  1, 41,  9, 49, 17, 57, 25, 
+    32,  0, 40,  8, 48, 16, 56, 24
+};
 // E扩展
 const int E_box[48] = {
     32,  1,  2,  3,  4,  5,  4,  5,  6,  7,  8,  9,
@@ -54,6 +74,13 @@ const int E_box[48] = {
     16, 17, 18, 19, 20, 21, 20, 21, 22, 23, 24, 25,
     24, 25, 26, 27, 28, 29, 28, 29, 30, 31, 32,  1
 }; 
+// E扩展倒转，再被32减去
+const int EE_box[48] = {
+    31,  0,  1,  2,  3,  4,  3,  4,  5,  6,  7,  8,
+     7,  8,  9, 10, 11, 12, 11, 12, 13, 14, 15, 16, 
+    15, 16, 17, 18, 19, 20, 19, 20, 21, 22, 23, 24, 
+    23, 24, 25, 26, 27, 28, 27, 28, 29, 30, 31,  0
+};
 // S置换表
 const int S_box_table[8][64] = {
     {
@@ -112,7 +139,12 @@ const int P_box[32] = {
      2,  8, 24, 14, 32, 27,  3,  9,
     19, 13, 30,  6, 22, 11,  4, 25
 };
-
+const int PP_box[32] = { 
+     7, 28, 21, 10, 26,  2, 19, 13, 
+    23, 29,  5,  0, 18,  8, 24, 30, 
+    22,  1, 14, 27,  6,  9, 17, 31, 
+    15,  4, 20,  3, 11, 12, 25, 16
+};
 /**
  * @brief Generate subkeys
  * @param[in] key original key
@@ -170,9 +202,9 @@ uint32_t f(uint32_t R, const unsigned char subKeys[6]) {
     // E扩展
     uint64_t E = 0;
     for (int i = 0; i < 48; i++) {
-        int bit_position = 32 - E_box[i];
+        int bit_position = EE_box[i];
         uint64_t bit = ((uint64_t)R >> bit_position) & 1;
-        E |= (bit << (47 - i));
+        E |= (bit << i);
     }
     // 与子密钥模2加
     E = (E ^ K) & 0x0FFFFFFFFFFFF;
@@ -185,9 +217,9 @@ uint32_t f(uint32_t R, const unsigned char subKeys[6]) {
     // 置换运算P
     uint32_t P = 0;
     for (int i = 0; i < 32; i++) {
-        int bit_position = 32 - P_box[i];
+        int bit_position = PP_box[i];
         uint32_t bit = (S >> bit_position) & 1;
-        P |= (bit << (31 - i));
+        P |= (bit << i);
     }
     return P;
 }
@@ -206,10 +238,9 @@ void des_encrypt_block(const unsigned char *input, unsigned char subKeys[16][6],
     // 初始置换 IP
     uint64_t LR = 0;
     for (int i = 0; i < 64; i++) {
-        int bit_position = 64 - IP_table[i];
+        int bit_position = new_IP_table[i];
         uint64_t bit = (M >> bit_position) & 1;
-        //LR |= (bit << (63 - i));
-        LR = (LR << 1) | bit;
+        LR |= (bit << i);
     }
 
     uint32_t L = (LR >> 32) & 0x0FFFFFFFF;
@@ -225,10 +256,9 @@ void des_encrypt_block(const unsigned char *input, unsigned char subKeys[16][6],
     // 逆初始置换 IP^-1
     uint64_t C = 0;
     for (int i = 0; i < 64; i++) {
-        int bit_position = 64 - IP_table_reverse[i];
+        int bit_position = new_IP_table_reverse[i];
         uint64_t bit = (LR >> bit_position) & 1;
-        //C |= (bit << (63 - i));
-        C = (C << 1) | bit;
+        C |= (bit << i);
     }
     // 将C写入output
     for (int i = 0; i < 8; i++) {
@@ -252,10 +282,9 @@ void des_decrypt_block(const unsigned char *input, unsigned char subKeys[16][6],
     // 初始置换 IP
     uint64_t LR = 0;
     for (int i = 0; i < 64; i++) {
-        int bit_position = 64 - IP_table[i];
+        int bit_position = new_IP_table[i];
         uint64_t bit = (C >> bit_position) & 1;
-        //LR |= (bit << (63 - i));
-        LR = (LR < 1) | bit;
+        LR |= (bit << i);
     }
 
     uint32_t L = (LR >> 32) & 0x0FFFFFFFF;
@@ -272,10 +301,9 @@ void des_decrypt_block(const unsigned char *input, unsigned char subKeys[16][6],
     // 逆初始置换 IP^-1
     uint64_t M = 0;
     for (int i = 0; i < 64; i++) {
-        int bit_position = 64 - IP_table_reverse[i];
+        int bit_position = new_IP_table_reverse[i];
         uint64_t bit = (LR >> bit_position) & 1;
-        //M |= (bit << (63 - i));
-        M = (M < 1) | bit;
+        M |= (bit << i);
     }
     
     // 将M写入output
