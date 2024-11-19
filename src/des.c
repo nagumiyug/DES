@@ -208,7 +208,8 @@ void des_encrypt_block(const unsigned char *input, unsigned char subKeys[16][6],
     for (int i = 0; i < 64; i++) {
         int bit_position = 64 - IP_table[i];
         uint64_t bit = (M >> bit_position) & 1;
-        LR |= (bit << (63 - i));
+        //LR |= (bit << (63 - i));
+        LR = (LR << 1) | bit;
     }
 
     uint32_t L = (LR >> 32) & 0x0FFFFFFFF;
@@ -226,7 +227,8 @@ void des_encrypt_block(const unsigned char *input, unsigned char subKeys[16][6],
     for (int i = 0; i < 64; i++) {
         int bit_position = 64 - IP_table_reverse[i];
         uint64_t bit = (LR >> bit_position) & 1;
-        C |= (bit << (63 - i));
+        //C |= (bit << (63 - i));
+        C = (C << 1) | bit;
     }
     // 将C写入output
     for (int i = 0; i < 8; i++) {
@@ -252,7 +254,8 @@ void des_decrypt_block(const unsigned char *input, unsigned char subKeys[16][6],
     for (int i = 0; i < 64; i++) {
         int bit_position = 64 - IP_table[i];
         uint64_t bit = (C >> bit_position) & 1;
-        LR |= (bit << (63 - i));
+        //LR |= (bit << (63 - i));
+        LR = (LR < 1) | bit;
     }
 
     uint32_t L = (LR >> 32) & 0x0FFFFFFFF;
@@ -271,7 +274,8 @@ void des_decrypt_block(const unsigned char *input, unsigned char subKeys[16][6],
     for (int i = 0; i < 64; i++) {
         int bit_position = 64 - IP_table_reverse[i];
         uint64_t bit = (LR >> bit_position) & 1;
-        M |= (bit << (63 - i));
+        //M |= (bit << (63 - i));
+        M = (M < 1) | bit;
     }
     
     // 将M写入output
