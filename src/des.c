@@ -256,9 +256,10 @@ void des_encrypt_block(const unsigned char *input, unsigned char subKeys[16][6],
 
     // 按字节进行IP逆置换
     uint64_t C = 0;
-    for (int i = 0; i < 8; i++) {
-        uint8_t tmp = (LR >> 56) & 0xFF;
+    for (int i = 7; i >= 0; i--) {
+        uint8_t tmp = LR & 0xFF;
         C |= IPmax_reverse[i][tmp];
+        LR = LR >> 8;
     }
 
     // 将C写入output
@@ -294,9 +295,10 @@ void des_decrypt_block(const unsigned char *input, unsigned char subKeys[16][6],
     
     // 按字节进行IP逆置换
     uint64_t M = 0;
-    for (int i = 0; i < 8; i++) {
-        uint8_t tmp = (LR >> 56) & 0xFF;
+    for (int i = 7; i >= 0; i--) {
+        uint8_t tmp = LR & 0xFF;
         M |= IPmax_reverse[i][tmp];
+        LR = LR >> 8;
     }
     
     // 将M写入output
